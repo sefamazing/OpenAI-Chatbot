@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles/style.css') }}"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  </head>
+
+  <body>
+    <!-- Modal -->
+    <div
+      class="modal fade"
+      id="roleModal"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="roleModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="roleModalLabel">Select Role</h5>
+          </div>
+          <div class="modal-body">
+            <form id="roleForm">
+              <div class="form-group">
+                <label for="roleSelect">Choose a role:</label>
+                <select class="form-control" id="roleSelect">
+                  <option value="University Guide">University Guide</option>
+                  <option value="Football Guide">Sports Guide</option>
+                  <option value="Medical Guide">Medical Guide</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="saveRole">
+              Save Role
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat_window">
+      <div class="top_menu">
+        <div class="title">ChatBot</div>
+      </div>
+      <ul class="messages"></ul>
+      <div class="bottom_wrapper clearfix">
+        <div class="message_input_wrapper">
+          <input class="message_input" placeholder="Send your message..." />
+        </div>
+        <div class="send_message">
+          <div class="icon"></div>
+          <div class="text">Send</div>
+        </div>
+      </div>
+      <div class="message_template">
+        <li class="message">
+          <div class="avatar"></div>
+          <div class="text_wrapper">
+            <div class="text"></div>
+          </div>
+        </li>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div id="button"></div>
+      <div id="container">
+        <div id="cont">
+          <div class="footer_center">
+            <h3>It is a ChatBot designed by hrstcke and sefaltnok.</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var Message;
+        Message = function (arg) {
+          (this.text = arg.text), (this.message_side = arg.message_side);
+          this.draw = (function (_this) {
+            return function () {
+              var $message;
+              $message = $($(".message_template").clone().html());
+              $message
+                .addClass(_this.message_side)
+                .find(".text")
+                .html(_this.text);
+              $(".messages").append($message);
+              return setTimeout(function () {
+                return $message.addClass("appeared");
+              }, 0);
+            };
+          })(this);
+          return this;
+        };
+        $(function () {
+          var getMessageText, message_side, sendMessage;
+          message_side = "right";
+          getMessageText = function () {
+            var $message_input;
+            $message_input = $(".message_input");
+            return $message_input.val();
+          };
+
+          sendMessage = function (text) {
+            var $messages, message;
+            if (text.trim() === "") {
+              return;
+            }
+            $(".message_input").val("");
+            $messages = $(".messages");
+
+            // Set message_side based on whether the message is from the user or chatbot
+            var message_side = "right";
+
+            message = new Message({
+              text: text,
+              message_side: message_side,
+            });
+
+            // Draw user message
+            message.draw();
+
+            // Call getResponse() to get the chatbot's response
+            $.get("/get", { msg: text }).done(function (data) {
+              var botMessage = new Message({
+                text: data,
+                message_side: "left",
+              });
+
+              // Draw bot message
+              botMessage.draw();
+              $messages.animate(
+                { scrollTop: $messages.prop("scrollHeight") },
+                300
+              );
+            });
+
+            return $messages.animate(
+              { scrollTop: $messages.prop("scrollHeight") },
+              300
+            );
+          };
+
+          $(".send_message").click(function (e) {
+            return sendMessage(getMessageText());
+          });
+          $(".message_input").keyup(function (e) {
+            if (e.which === 13) {
+              return sendMessage(getMessageText());
+            }
+          });
+
+          // Show the modal on page load
+          $("#roleModal").modal("show");
+
+          // Handle role selection
+          $("#saveRole").click(function () {
+            var selectedRole = $("#roleSelect").val();
+            $.post("/set_role", { role: selectedRole }, function (response) {
+              $("#roleModal").modal("hide");
+              // Display initial bot message based on the selected role
+              var initialMessage =
+                "Welcome to ChatBot. My purpose is to give information as a  " +
+                selectedRole +
+                ". How can I help you today?";
+              var writingMessage = new Message({
+                text: initialMessage,
+                message_side: "left",
+              });
+              writingMessage.draw();
+            }).fail(function (xhr, status, error) {
+              console.error("Error:", error); // Log error message
+            });
+          });
+        });
+      }).call(this);
+    </script>
+  </body>
+</html>
